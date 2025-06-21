@@ -102,7 +102,6 @@
   </style>
 </head>
 <body>
-  <!-- Header Bar -->
   <div class="header">
     <div>POINTS: <span id="points">0</span> ⭐ x<span id="bonus">0</span></div>
     <div>Flow for Good</div>
@@ -111,12 +110,10 @@
     </div>
   </div>
 
-  <!-- Instruction Text -->
   <div class="instruction-text">
     <b>Create a path for the water to get to the bucket!</b>
   </div>
 
-  <!-- Game Area with faucet, grid, and bucket -->
   <div class="game-area">
     <div class="icon-row">
       <span class="pipe-icon">⛏️</span>
@@ -127,10 +124,8 @@
     </div>
   </div>
 
-  <!-- Start Flow Button -->
   <button class="button" id="startFlowBtn">Start Flow</button>
 
-  <!-- Overlays -->
   <div class="overlay" id="instruction">
     <p>
       Click or drag across the tiles to dig a path from the tool to the bucket.<br>
@@ -141,8 +136,9 @@
     </p>
     <button class="button" id="hideInstructionBtn">Got it!</button>
   </div>
+
   <div class="feedback" id="success">
-    <h2>✅ Success!</h2>
+    <h2> Congratulations! 👏 </h2>
     <p>You delivered clean water!</p>
     <p>+<span id="successPoints">10</span> points</p>
     <p>Every minute, someone begins walking for water.</p>
@@ -150,49 +146,48 @@
     <button class="button" id="playAgainBtn">Play Again</button>
   </div>
 
-  <!-- Footer -->
+  <div class="feedback" id="finished">
+    <h2>🎉 All Levels Complete!</h2>
+    <p>Great job! You finished all 5 levels.</p>
+    <button class="button" id="playAgainAllBtn">Play Again</button>
+    <button class="button" id="stopBtn">Stop</button>
+  </div>
+
   <div class="footer" style="position:fixed; left:0; right:0; bottom:0;">
     FLOW FOR GOOD
     <span style="margin: 0 8px;">🤝</span>
     charity: water
     <img src="img/cw.png" alt="charity: water logo" style="height:22px; margin-left:8px; vertical-align:middle;">
   </div>
+
   <script>
     const gridEl = document.getElementById('grid');
     const pointsEl = document.getElementById('points');
     const bonusEl = document.getElementById('bonus');
     let points = 0;
     let bonus = 0;
-
-    // For drag-to-dig
     let isDragging = false;
-
-    // Store the current grid state so we can reset only the path
     let currentGridTypes = [];
+    let currentRound = 1; // Track the current round (start at 1)
+    const maxRounds = 5; // Total number of rounds
 
     function buildGrid(fromReset = false) {
       gridEl.innerHTML = '';
-      const tiles = [];
-      // If not resetting, generate a new grid and save its types
       if (!fromReset) {
         currentGridTypes = [];
+        // Use the same obstacle/bonus frequency for all rounds
+        let rockChance = 0.14;
+        let dirtyChance = 0.08;
+        let bonusChance = 0.04;
         for (let i = 0; i < 100; i++) {
           let type = 'dirt';
-          let icon = '';
-          if (Math.random() < 0.1) {
-            type = 'rock';
-            icon = '🪨';
-          } else if (Math.random() < 0.05) {
-            type = 'dirty';
-            icon = '⚠️';
-          } else if (Math.random() < 0.05) {
-            type = 'bonus';
-            icon = '💧';
-          }
+          let rand = Math.random();
+          if (rand < rockChance) type = 'rock';
+          else if (rand < rockChance + dirtyChance) type = 'dirty';
+          else if (rand < rockChance + dirtyChance + bonusChance) type = 'bonus';
           currentGridTypes.push(type);
         }
       }
-      // Build the grid from currentGridTypes
       for (let i = 0; i < 100; i++) {
         const tile = document.createElement('div');
         const type = currentGridTypes[i];
@@ -200,101 +195,142 @@
         if (type === 'rock') tile.textContent = '🪨';
         if (type === 'dirty') tile.textContent = '⚠️';
         if (type === 'bonus') tile.textContent = '💧';
-        // Mouse events for drag-to-dig
-        tile.addEventListener('mousedown', (e) => {
-          if (tile.classList.contains('dirt') || tile.classList.contains('bonus')) {
-            isDragging = true;
-            digTile(tile);
-          }
+        tile.addEventListener('mousedown', () => {
+          isDragging = true;
+          digTile(tile);
         });
-        tile.addEventListener('mouseover', (e) => {
-          if (isDragging && (tile.classList.contains('dirt') || tile.classList.contains('bonus'))) {
-            digTile(tile);
-          }
+        tile.addEventListener('mouseover', () => {
+          if (isDragging) digTile(tile);
         });
-        // Touch events for mobile
         tile.addEventListener('touchstart', (e) => {
-          if (tile.classList.contains('dirt') || tile.classList.contains('bonus')) {
-            isDragging = true;
-            digTile(tile);
-            e.preventDefault();
-          }
+          isDragging = true;
+          digTile(tile);
+          e.preventDefault();
         });
         tile.addEventListener('touchmove', (e) => {
           const touch = e.touches[0];
           const target = document.elementFromPoint(touch.clientX, touch.clientY);
-          if (isDragging && target && (target.classList.contains('dirt') || target.classList.contains('bonus'))) {
+          if (isDragging && target && target.classList.contains('tile')) {
             digTile(target);
           }
         });
-        tiles.push(tile);
         gridEl.appendChild(tile);
       }
-      // Stop dragging when mouse/touch ends
       document.addEventListener('mouseup', () => { isDragging = false; });
       document.addEventListener('touchend', () => { isDragging = false; });
     }
 
-    // Helper to dig a tile
     function digTile(tile) {
-      // If the player digs dirt, clear it
       if (tile.classList.contains('dirt')) {
         tile.style.background = '#b3e5fc';
         tile.classList.remove('dirt');
         tile.textContent = '';
-      }
-      // If the player collects a bonus, increase bonus
-      if (tile.classList.contains('bonus')) {
+      } else if (tile.classList.contains('bonus')) {
         tile.style.background = '#b3e5fc';
         tile.classList.remove('bonus');
         tile.textContent = '';
         bonus++;
         bonusEl.textContent = bonus;
-      }
-      // If the player hits an obstacle (rock or pollution), lose points and reset only the path (not the grid layout)
-      if (tile.classList.contains('rock') || tile.classList.contains('dirty')) {
-        // Subtract points, but don't go below zero
-        points = points - 2;
-        if (points < 0) {
-          points = 0;
-        }
+      } else if (tile.classList.contains('rock') || tile.classList.contains('dirty')) {
+        points = Math.max(0, points - 2);
         pointsEl.textContent = points;
-        // Reset only the path and bonus, not the grid layout
-        resetGame();
+        showMinusTwoOverlay();
+        resetGridToCurrentLayout();
       }
     }
 
-    // Reset only the path and bonus, not the grid layout
-    function resetGame() {
-      bonus = 0;
-      bonusEl.textContent = bonus;
-      // Rebuild the grid using the same layout
-      buildGrid(true);
-      // Hide overlays
-      document.getElementById('success').style.display = 'none';
-      // No failure message needed
+    function showMinusTwoOverlay() {
+      const overlay = document.createElement('div');
+      overlay.style.position = 'fixed';
+      overlay.style.top = '50%';
+      overlay.style.left = '50%';
+      overlay.style.transform = 'translate(-50%, -50%)';
+      overlay.style.fontSize = '3rem';
+      overlay.style.fontWeight = 'bold';
+      overlay.style.color = 'red';
+      overlay.style.background = 'rgba(255,255,255,0.8)';
+      overlay.style.padding = '20px 40px';
+      overlay.style.borderRadius = '12px';
+      overlay.style.zIndex = '9999';
+      overlay.innerText = '-2';
+      document.body.appendChild(overlay);
+      setTimeout(() => {
+        document.body.removeChild(overlay);
+      }, 1000);
     }
 
-    // When player clicks Start Flow, check if they reached the bucket without hitting obstacles
+    function resetGridToCurrentLayout() {
+      const tiles = gridEl.children;
+      for (let i = 0; i < tiles.length; i++) {
+        const tile = tiles[i];
+        if (!tile.classList.contains('rock') &&
+            !tile.classList.contains('dirty') &&
+            !tile.classList.contains('bonus') &&
+            !tile.classList.contains('dirt')) {
+          tile.className = 'tile dirt';
+          tile.style.background = '';
+          tile.textContent = '';
+          currentGridTypes[i] = 'dirt';
+        }
+      }
+      document.getElementById('success').style.display = 'none';
+    }
+
     function startFlow() {
-      // Check if the player reached the bucket (bottom row, any column)
-      // We'll check if any tile in the last row is cleared (not dirt, rock, dirty, or bonus)
       let reachedBucket = false;
       const gridTiles = gridEl.children;
-      for (let i = 90; i < 100; i++) { // last row in a 10x10 grid
+      for (let i = 90; i < 100; i++) {
         const tile = gridTiles[i];
-        if (!tile.classList.contains('dirt') && !tile.classList.contains('rock') && !tile.classList.contains('dirty') && !tile.classList.contains('bonus')) {
+        if (!tile.classList.contains('dirt') && !tile.classList.contains('rock') &&
+            !tile.classList.contains('dirty') && !tile.classList.contains('bonus')) {
           reachedBucket = true;
         }
       }
       if (reachedBucket) {
-        // Success! Add points and show success message
         points += 10 + bonus;
         pointsEl.textContent = points;
         document.getElementById('successPoints').textContent = 10 + bonus;
         document.getElementById('success').style.display = 'flex';
+        showConfetti(); // Show confetti effect when player wins
       }
-      // If not reached, do nothing (no oops message)
+    }
+
+    // Simple confetti effect for beginners
+    function showConfetti() {
+      // Create 30 confetti pieces
+      for (let i = 0; i < 30; i++) {
+        const confetti = document.createElement('div');
+        // Random color for each piece
+        const colors = ['#FFC907', '#2E9DF7', '#8d6e63', '#00b0ff', '#ffd700', '#c97272'];
+        confetti.style.position = 'fixed';
+        confetti.style.left = `${Math.random() * 100}%`;
+        confetti.style.top = '-30px';
+        confetti.style.width = '12px';
+        confetti.style.height = '12px';
+        confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+        confetti.style.borderRadius = '4px';
+        confetti.style.opacity = '0.8';
+        confetti.style.zIndex = '9999';
+        confetti.style.transition = 'top 1.2s linear, left 1.2s linear, opacity 1.2s linear';
+        document.body.appendChild(confetti);
+        // Animate falling
+        setTimeout(() => {
+          confetti.style.top = `${60 + Math.random() * 30}vh`;
+          confetti.style.left = `${Math.random() * 100}%`;
+          confetti.style.opacity = '0';
+        }, 10);
+        // Remove after animation
+        setTimeout(() => {
+          document.body.removeChild(confetti);
+        }, 1300);
+      }
+    }
+
+    function resetGame() {
+      bonus = 0;
+      bonusEl.textContent = bonus;
+      buildGrid(true);
+      document.getElementById('success').style.display = 'none';
     }
 
     function hideInstruction() {
@@ -306,9 +342,34 @@
     document.getElementById('hideInstructionBtn').onclick = hideInstruction;
     document.getElementById('resetBtn').onclick = resetGame;
     document.getElementById('startFlowBtn').onclick = startFlow;
-    document.getElementById('nextLevelBtn').onclick = resetGame;
+    document.getElementById('nextLevelBtn').onclick = function() {
+      // When Next Level is pressed, go to the next round if not at max
+      if (currentRound < maxRounds) {
+        currentRound++;
+        bonus = 0;
+        bonusEl.textContent = bonus;
+        buildGrid(false); // false means new grid
+        document.getElementById('success').style.display = 'none';
+      } else {
+        // If finished all rounds, show overlay message
+        document.getElementById('success').style.display = 'none';
+        document.getElementById('finished').style.display = 'flex';
+      }
+    };
+
+    document.getElementById('playAgainAllBtn').onclick = function() {
+      // Restart from round 1
+      currentRound = 1;
+      bonus = 0;
+      bonusEl.textContent = bonus;
+      buildGrid(false);
+      document.getElementById('finished').style.display = 'none';
+    };
+    document.getElementById('stopBtn').onclick = function() {
+      // Hide the overlay and optionally do something else
+      document.getElementById('finished').style.display = 'none';
+    };
     document.getElementById('playAgainBtn').onclick = resetGame;
-    document.getElementById('tryAgainBtn').onclick = resetGame;
   </script>
 </body>
 </html>

@@ -149,12 +149,6 @@
     <button class="button" id="nextLevelBtn">Next Level</button>
     <button class="button" id="playAgainBtn">Play Again</button>
   </div>
-  <div class="feedback" id="failure">
-    <h2>❌ Oops!</h2>
-    <p>Water got polluted.</p>
-    <p>1 in 10 people lack clean water.</p>
-    <button class="button" id="tryAgainBtn">Try Again</button>
-  </div>
 
   <!-- Footer -->
   <div class="footer" style="position:fixed; left:0; right:0; bottom:0;">
@@ -173,25 +167,39 @@
     // For drag-to-dig
     let isDragging = false;
 
-    function buildGrid() {
+    // Store the current grid state so we can reset only the path
+    let currentGridTypes = [];
+
+    function buildGrid(fromReset = false) {
       gridEl.innerHTML = '';
-      // Store tile elements for drag logic
       const tiles = [];
+      // If not resetting, generate a new grid and save its types
+      if (!fromReset) {
+        currentGridTypes = [];
+        for (let i = 0; i < 100; i++) {
+          let type = 'dirt';
+          let icon = '';
+          if (Math.random() < 0.1) {
+            type = 'rock';
+            icon = '🪨';
+          } else if (Math.random() < 0.05) {
+            type = 'dirty';
+            icon = '⚠️';
+          } else if (Math.random() < 0.05) {
+            type = 'bonus';
+            icon = '💧';
+          }
+          currentGridTypes.push(type);
+        }
+      }
+      // Build the grid from currentGridTypes
       for (let i = 0; i < 100; i++) {
         const tile = document.createElement('div');
-        // Default to dirt
-        tile.className = 'tile dirt';
-        // Randomly assign type and icon
-        if (Math.random() < 0.1) {
-          tile.className = 'tile rock';
-          tile.textContent = '🪨'; // Rock icon
-        } else if (Math.random() < 0.05) {
-          tile.className = 'tile dirty';
-          tile.textContent = '⚠️'; // Pollution icon (plastic bottle)
-        } else if (Math.random() < 0.05) {
-          tile.className = 'tile bonus';
-          tile.textContent = '💧'; // Bonus droplet
-        }
+        const type = currentGridTypes[i];
+        tile.className = 'tile ' + type;
+        if (type === 'rock') tile.textContent = '🪨';
+        if (type === 'dirty') tile.textContent = '⚠️';
+        if (type === 'bonus') tile.textContent = '💧';
         // Mouse events for drag-to-dig
         tile.addEventListener('mousedown', (e) => {
           if (tile.classList.contains('dirt') || tile.classList.contains('bonus')) {
@@ -229,11 +237,13 @@
 
     // Helper to dig a tile
     function digTile(tile) {
+      // If the player digs dirt, clear it
       if (tile.classList.contains('dirt')) {
         tile.style.background = '#b3e5fc';
         tile.classList.remove('dirt');
         tile.textContent = '';
       }
+      // If the player collects a bonus, increase bonus
       if (tile.classList.contains('bonus')) {
         tile.style.background = '#b3e5fc';
         tile.classList.remove('bonus');
@@ -241,27 +251,50 @@
         bonus++;
         bonusEl.textContent = bonus;
       }
+      // If the player hits an obstacle (rock or pollution), lose points and reset only the path (not the grid layout)
+      if (tile.classList.contains('rock') || tile.classList.contains('dirty')) {
+        // Subtract points, but don't go below zero
+        points = points - 2;
+        if (points < 0) {
+          points = 0;
+        }
+        pointsEl.textContent = points;
+        // Reset only the path and bonus, not the grid layout
+        resetGame();
+      }
     }
 
+    // Reset only the path and bonus, not the grid layout
     function resetGame() {
-      points = 0;
       bonus = 0;
-      pointsEl.textContent = points;
       bonusEl.textContent = bonus;
+      // Rebuild the grid using the same layout
+      buildGrid(true);
+      // Hide overlays
       document.getElementById('success').style.display = 'none';
-      document.getElementById('failure').style.display = 'none';
-      buildGrid();
+      // No failure message needed
     }
 
+    // When player clicks Start Flow, check if they reached the bucket without hitting obstacles
     function startFlow() {
-      if (Math.random() > 0.5) {
-        document.getElementById('success').style.display = 'flex';
+      // Check if the player reached the bucket (bottom row, any column)
+      // We'll check if any tile in the last row is cleared (not dirt, rock, dirty, or bonus)
+      let reachedBucket = false;
+      const gridTiles = gridEl.children;
+      for (let i = 90; i < 100; i++) { // last row in a 10x10 grid
+        const tile = gridTiles[i];
+        if (!tile.classList.contains('dirt') && !tile.classList.contains('rock') && !tile.classList.contains('dirty') && !tile.classList.contains('bonus')) {
+          reachedBucket = true;
+        }
+      }
+      if (reachedBucket) {
+        // Success! Add points and show success message
         points += 10 + bonus;
         pointsEl.textContent = points;
         document.getElementById('successPoints').textContent = 10 + bonus;
-      } else {
-        document.getElementById('failure').style.display = 'flex';
+        document.getElementById('success').style.display = 'flex';
       }
+      // If not reached, do nothing (no oops message)
     }
 
     function hideInstruction() {

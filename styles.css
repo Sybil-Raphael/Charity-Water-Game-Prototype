@@ -187,17 +187,49 @@ body {
 }
 
 /* Responsive */
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: repeat(10, 24px);
+    grid-template-rows: repeat(10, 24px);
+  }
+  .tile {
+    width: 24px;
+    height: 24px;
+    font-size: 10px;
+  }
+  .button {
+    font-size: 1rem;
+    padding: 8px 18px;
+    bottom: 60px;
+    right: 10px;
+  }
+}
 @media (max-width: 600px) {
   .grid {
-    grid-template-columns: repeat(10, 20px);
-    grid-template-rows: repeat(12, 20px);
+    grid-template-columns: repeat(10, 16px);
+    grid-template-rows: repeat(10, 16px);
+  }
+  .tile {
+    width: 16px;
+    height: 16px;
+    font-size: 8px;
   }
   .button {
     font-size: 0.9rem;
-    padding: 7px 14px;
-    bottom: 60px;
+    padding: 7px 10px;
+    bottom: 40px;
+    right: 5px;
   }
   .footer {
+    font-size: 0.8rem;
+    padding: 6px;
+  }
+  .header {
     font-size: 0.9rem;
+    padding: 6px;
+  }
+  .instruction-text {
+    font-size: 0.95rem;
+    margin: 6px 0;
   }
 }

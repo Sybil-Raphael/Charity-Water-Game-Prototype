@@ -216,8 +216,10 @@ document.getElementById('nextRoundBtn').onclick = function() {
   document.getElementById('roundComplete').style.display = 'none';
 };
 document.getElementById('playAgainAllBtn').onclick = function() {
-  // Restart from round 1
+  // Restart from round 1 and reset points
   currentRound = 1;
+  points = 0;
+  pointsEl.textContent = points;
   bonus = 0;
   bonusEl.textContent = bonus;
   buildGrid(false);
